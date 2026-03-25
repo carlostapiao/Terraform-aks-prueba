@@ -1,0 +1,45 @@
+name: Build and Deploy to AKS
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  ACR_NAME: carlos69lamejor
+  IMAGE_NAME: app
+  AKS_NAME: aks-lab
+  RESOURCE_GROUP: rg-k8s-lab
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Login to ACR
+      run: az acr login --name $ACR_NAME
+
+    - name: Build and Push Docker image (ARM64)
+      run: |
+        docker buildx create --use
+        docker buildx build \
+          --platform linux/arm64 \
+          -t $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ github.sha }} \
+          -t $ACR_NAME.azurecr.io/$IMAGE_NAME:latest \
+          --push .
+
+    - name: Get AKS credentials
+      run: az aks get-credentials --resource-group $RESOURCE_GROUP --name $AKS_NAME --overwrite-existing
+
+    - name: Deploy to AKS
+      run: |
+        kubectl set image deployment/convenio-api convenio-api=$ACR_NAME.azurecr.io/$IMAGE_NAME:${{ github.sha }}
+        kubectl apply -f kubernetes/
