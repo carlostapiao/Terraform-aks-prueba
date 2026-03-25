@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: convenio-api
+  labels:
+    app: convenio-api
+spec:
+  replicas: 1
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: convenio-api
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+  template:
+    metadata:
+      labels:
+        app: convenio-api
+    spec:
+      containers:
+        - name: convenio-api
+          image: carlos69lamejor.azurecr.io/app:1.0
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 4040
+              protocol: TCP
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
